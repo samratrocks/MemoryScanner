@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <vector>
 
 
 class Scanner {
@@ -11,4 +12,6 @@ public:
 	void closeProcess();
 	void loadNotepad();
 	void attachToProcess(DWORD pid);
+	void enumerateRegions();
+	bool readRegion(LPCVOID baseAddress, SIZE_T size, std::vector<BYTE>& out);
 };

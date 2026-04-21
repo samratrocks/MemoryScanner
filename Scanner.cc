@@ -1,8 +1,22 @@
 #include <windows.h>
 #include <iostream>
 #include "Scanner.h"
+#include <vector>
 
 using namespace std;
+
+/*
+ * TODO:
+ *
+ * - Add: enum HandleSource { NONE, LAUNCHED, ATTACHED } handleSource; DWORD currentPid;
+ * - Rename attachToProcess -> attachAsDebugger (keep for debugger half)
+ * - Add openProcessByPid(DWORD pid): close existing handle first, OpenProcess w/
+ *   PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, log GetLastError on fail
+ * - loadProcess: set handleSource = LAUNCHED, store pi.dwProcessId
+ * - closeProcess: reset handleSource/currentPid/processHandle; doesn't kill process
+ * - (Optional) terminateAndClose() guarded on LAUNCHED
+ * - GUI: PID field, Attach/Close buttons, show currentPid + handleSource, surface errors
+ */
 
 
 LPCWSTR Scanner::version() {
@@ -29,11 +43,24 @@ HANDLE Scanner::loadProcess(const WCHAR* pathToExe) {
 	);
 
 	this->processHandle = pi.hProcess;
+	cout << "this->processHandle: " << this->processHandle << endl;
 	return this->processHandle;
 }
 
 void Scanner::closeProcess() {
-	CloseHandle(this->processHandle);
+	if (!this->processHandle) {
+		cout << "No process handle" << endl;
+		return;
+	}
+
+	try {
+		CloseHandle(this->processHandle);
+	}
+	catch (int errorCode) {
+		cout << "Couldn't close process, exiting anyways." << endl;
+		cout << "Error Code "  << errorCode << endl;
+	}
+
 }
 
 void Scanner::attachToProcess(DWORD pid) {
@@ -52,4 +79,15 @@ void Scanner::loadNotepad() {
 
 	// Load notepad
 	return;
+}
+
+void Scanner::enumerateRegions() {
+	if (!this->processHandle) {
+		cout << "Process handle is missing [this->processHandle]" << endl;
+	}
+}
+
+bool Scanner::readRegion(LPCVOID baseAddress, SIZE_T size, std::vector<BYTE>& out) {
+	cout << "Stub function not implemened: [readRegion]" << endl;
+	return false;
 }
