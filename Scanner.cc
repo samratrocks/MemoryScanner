@@ -5,19 +5,25 @@
 
 using namespace std;
 
-/*
- * TODO:
- *
- * - Add: enum HandleSource { NONE, LAUNCHED, ATTACHED } handleSource; DWORD currentPid;
- * - Rename attachToProcess -> attachAsDebugger (keep for debugger half)
- * - Add openProcessByPid(DWORD pid): close existing handle first, OpenProcess w/
- *   PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, log GetLastError on fail
- * - loadProcess: set handleSource = LAUNCHED, store pi.dwProcessId
- * - closeProcess: reset handleSource/currentPid/processHandle; doesn't kill process
- * - (Optional) terminateAndClose() guarded on LAUNCHED
- * - GUI: PID field, Attach/Close buttons, show currentPid + handleSource, surface errors
- */
 
+
+
+
+HANDLE Scanner::openProcessByPid(DWORD pid) {
+	this->closeProcess();						// let's close the current process before we open another
+	HANDLE processHandle = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, pid);
+
+	if (!processHandle) {
+		cout << "Unable to open process by id: " << GetLastError() << endl;
+		return NULL;
+	}
+
+	this->processHandle = processHandle;
+	this->handleSource = ATTACHED;
+	this->currentPid = pid;
+
+	return processHandle;
+}
 
 LPCWSTR Scanner::version() {
 	return L"MemScanner v0.01";
@@ -29,7 +35,7 @@ HANDLE Scanner::loadProcess(const WCHAR* pathToExe) {
 	PROCESS_INFORMATION pi = { 0 };
 	si.cb = sizeof(si);
 
-	CreateProcessW(
+	BOOL isProcessCreated = CreateProcessW(
 		pathToExe,   // lpApplicationName
 		NULL,        // lpCommandLine
 		NULL,        // lpProcessAttributes
@@ -42,7 +48,16 @@ HANDLE Scanner::loadProcess(const WCHAR* pathToExe) {
 		&pi          // lpProcessInformation
 	);
 
+	if (!isProcessCreated) {
+		// throw some error
+		cout << GetLastError() << endl;
+		return NULL;
+	}
+
+	CloseHandle(pi.hThread);
 	this->processHandle = pi.hProcess;
+	this->handleSource = LAUNCHED;
+	this->currentPid = pi.dwProcessId;
 	cout << "this->processHandle: " << this->processHandle << endl;
 	return this->processHandle;
 }
@@ -53,17 +68,16 @@ void Scanner::closeProcess() {
 		return;
 	}
 
-	try {
-		CloseHandle(this->processHandle);
-	}
-	catch (int errorCode) {
-		cout << "Couldn't close process, exiting anyways." << endl;
-		cout << "Error Code "  << errorCode << endl;
+	if (!CloseHandle(this->processHandle)) {
+		cout << "CloseHandle failed: " << GetLastError() << endl;
 	}
 
+	this->processHandle = NULL;
+	handleSource = NONE;
+	this->currentPid = 0;
 }
 
-void Scanner::attachToProcess(DWORD pid) {
+void Scanner::attachAsDebugger(DWORD pid) {
 	// use the process id to attach to a process
 	if (!DebugActiveProcess(pid)) {
 		cout << "Unable to attach to process." << endl;
@@ -73,11 +87,9 @@ void Scanner::attachToProcess(DWORD pid) {
 
 void Scanner::loadNotepad() {
 	if (!Scanner::loadProcess(L"C:\\Windows\\System32\\notepad.exe")) {
-		cerr << "Unable to load notepad." << endl;
-		exit;
+		cerr << "Unable to load notepad: " << GetLastError() << endl;
 	}
 
-	// Load notepad
 	return;
 }
 
