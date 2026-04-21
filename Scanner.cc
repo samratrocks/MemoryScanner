@@ -9,6 +9,34 @@ using namespace std;
 
 
 
+void Scanner::enumerateRegions() {
+	if (this->processHandle == NULL) {
+		return;
+	 }
+
+	MEMORY_BASIC_INFORMATION mbi;
+	uintptr_t addr = 0;
+
+	while (VirtualQueryEx(this->processHandle, (LPCVOID)addr, &mbi, sizeof(mbi)) == sizeof(mbi)) {
+		if (mbi.State == MEM_COMMIT
+			&& !(mbi.Protect & PAGE_GUARD)
+			&& !(mbi.Protect & PAGE_NOACCESS)
+			&& (mbi.Protect & PAGE_READWRITE)) {
+
+			// Process the memory region
+			cout << "Base: " << mbi.BaseAddress
+				<< "\t\tSize: " << mbi.RegionSize
+				<< "\tCurrent address: " << addr
+				<< "\tNext address: " << (uintptr_t)mbi.BaseAddress + mbi.RegionSize
+				<< endl;
+		}
+
+		addr = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+	}
+}
+
+
+
 HANDLE Scanner::openProcessByPid(DWORD pid) {
 	this->closeProcess();						// let's close the current process before we open another
 	HANDLE processHandle = OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, pid);
@@ -88,14 +116,6 @@ void Scanner::attachAsDebugger(DWORD pid) {
 void Scanner::loadNotepad() {
 	if (!Scanner::loadProcess(L"C:\\Windows\\System32\\notepad.exe")) {
 		cerr << "Unable to load notepad: " << GetLastError() << endl;
-	}
-
-	return;
-}
-
-void Scanner::enumerateRegions() {
-	if (!this->processHandle) {
-		cout << "Process handle is missing [this->processHandle]" << endl;
 	}
 }
 

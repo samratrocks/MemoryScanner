@@ -8,6 +8,9 @@
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
+	AllocConsole();
+	FILE* f;
+	freopen_s(&f, "CONOUT$", "w", stdout);
 	MSG msg;
 	WNDCLASSW wc = { 0 };
 
@@ -79,6 +82,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			Scanner* scanner = (Scanner*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			if (LOWORD(wParam) == ID_BTN) {
 				scanner->loadNotepad();
+				scanner->enumerateRegions();
 			}
 			else if (LOWORD(wParam) == ID_CLOSE) {
 				scanner->closeProcess();
