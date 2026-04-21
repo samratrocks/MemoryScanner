@@ -7,6 +7,7 @@ class Scanner {
 private:
 	HANDLE processHandle;
 	DWORD currentPid;
+	BOOL debug;
 
 	enum HandleSource {
 		NONE,

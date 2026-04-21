@@ -24,17 +24,54 @@ void Scanner::enumerateRegions() {
 			&& (mbi.Protect & PAGE_READWRITE)) {
 
 			// Process the memory region
-			cout << "Base: " << mbi.BaseAddress
-				<< "\t\tSize: " << mbi.RegionSize
-				<< "\tCurrent address: " << addr
-				<< "\tNext address: " << (uintptr_t)mbi.BaseAddress + mbi.RegionSize
-				<< endl;
+			if (this->debug == TRUE) {
+				cout << "Base: " << mbi.BaseAddress
+					<< "\t\tSize: " << mbi.RegionSize
+					<< "\tCurrent address: " << addr
+					<< "\tNext address: " << (uintptr_t)mbi.BaseAddress + mbi.RegionSize
+					<< endl;
+			}
+
+
+			std::vector<BYTE> buffer;
+			if (this->readRegion(mbi.BaseAddress, mbi.RegionSize, buffer)) {
+				cout << std::hex << std::uppercase << (uintptr_t)mbi.BaseAddress << std::dec;
+				for (size_t i = 0; i < buffer.size() && i < 16; i++) {
+
+					printf("%02X ", buffer[i]);
+
+				}
+				cout << endl;
+			}
 		}
 
 		addr = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
 	}
 }
 
+bool Scanner::readRegion(LPCVOID baseAddress, SIZE_T size, std::vector<BYTE>& out) {
+	if (this->processHandle == NULL) {
+		return false;
+	}
+
+	out.resize(size);
+	SIZE_T bytesRead = 0;
+	BOOL ok = ReadProcessMemory(
+		this->processHandle,
+		baseAddress,
+		out.data(),
+		size,
+		&bytesRead
+	);
+
+	if (!ok) {
+		cout << "Error reading region: " << GetLastError() << endl;
+		return false;
+	}
+
+	out.resize(bytesRead);
+	return bytesRead > 0;
+}
 
 
 HANDLE Scanner::openProcessByPid(DWORD pid) {
@@ -117,9 +154,4 @@ void Scanner::loadNotepad() {
 	if (!Scanner::loadProcess(L"C:\\Windows\\System32\\notepad.exe")) {
 		cerr << "Unable to load notepad: " << GetLastError() << endl;
 	}
-}
-
-bool Scanner::readRegion(LPCVOID baseAddress, SIZE_T size, std::vector<BYTE>& out) {
-	cout << "Stub function not implemened: [readRegion]" << endl;
-	return false;
 }
