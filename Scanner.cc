@@ -19,21 +19,36 @@ void Scanner::scanForValue(DWORD value) {
 	MEMORY_BASIC_INFORMATION memoryInfo;
 	uintptr_t address = 0;
 
-	// Use virtual query ex walk + filter to walk through the whole memory region
-	// I need to get the initial address
+
+	std::vector<BYTE> buffer;
 	while (VirtualQueryEx(this->processHandle, (LPCVOID)address, &memoryInfo, sizeof(memoryInfo)) == sizeof(memoryInfo)) {
-		// We need to check against guards, noaccess etc but we'll skip that for now.
-		std::vector<BYTE> buffer;	// this is going to be the whole buffer
-		const int byteSize = 4;
-		
-		if (this->readRegion(memoryInfo.BaseAddress, byteSize, buffer)) {
-			// We are going to move forward one byte at a time.
-			// let's do that.
-			printf("%02X ", buffer[0]);
+		if (memoryInfo.State != MEM_COMMIT
+			|| (memoryInfo.Protect & PAGE_GUARD)
+			|| (memoryInfo.Protect & PAGE_NOACCESS)
+			|| !(memoryInfo.Protect & PAGE_READWRITE)) {
+			address = (uintptr_t)memoryInfo.BaseAddress + memoryInfo.RegionSize;
+			continue;
 		}
 
-		address = (uintptr_t)memoryInfo.BaseAddress + byteSize;
+		if (this->readRegion(memoryInfo.BaseAddress, memoryInfo.RegionSize, buffer)) {
+			for (size_t i = 0; i + sizeof(DWORD) <= buffer.size(); i++) {
+				DWORD current = *(DWORD *) &buffer[i];
+
+				if (current == value) {
+					hits.push_back((uintptr_t)memoryInfo.BaseAddress + i);
+				}
+			}
+		}
+		else {
+			if (this->debug) {
+				cout << "Readregion failed for " << memoryInfo.BaseAddress << endl;
+			}
+		}
+
+		address = (uintptr_t)memoryInfo.BaseAddress + memoryInfo.RegionSize;
 	}
+
+	cout << "Hits: " << hits.size() << endl;
 }
 
 void Scanner::enumerateRegions() {

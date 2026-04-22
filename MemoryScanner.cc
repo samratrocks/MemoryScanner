@@ -82,7 +82,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			Scanner* scanner = (Scanner*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			if (LOWORD(wParam) == ID_BTN) {
 				scanner->loadNotepad();
-				scanner->enumerateRegions();
+				scanner->scanForValue(0xDEADBEEF);	// Hardcoded saerch right now.
 			}
 			else if (LOWORD(wParam) == ID_CLOSE) {
 				scanner->closeProcess();
