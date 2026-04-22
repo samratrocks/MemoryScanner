@@ -6,8 +6,35 @@
 using namespace std;
 
 
+void Scanner::scanForValue(DWORD value) {
+	// Clear the hits variable
+	this->hits.clear();
+	
+	// If no process handle bail
+	if (!this->processHandle) {
+		cout << "No process handle, unable to proceed" << endl;
+		return;
+	}
 
+	MEMORY_BASIC_INFORMATION memoryInfo;
+	uintptr_t address = 0;
 
+	// Use virtual query ex walk + filter to walk through the whole memory region
+	// I need to get the initial address
+	while (VirtualQueryEx(this->processHandle, (LPCVOID)address, &memoryInfo, sizeof(memoryInfo)) == sizeof(memoryInfo)) {
+		// We need to check against guards, noaccess etc but we'll skip that for now.
+		std::vector<BYTE> buffer;	// this is going to be the whole buffer
+		const int byteSize = 4;
+		
+		if (this->readRegion(memoryInfo.BaseAddress, byteSize, buffer)) {
+			// We are going to move forward one byte at a time.
+			// let's do that.
+			printf("%02X ", buffer[0]);
+		}
+
+		address = (uintptr_t)memoryInfo.BaseAddress + byteSize;
+	}
+}
 
 void Scanner::enumerateRegions() {
 	if (this->processHandle == NULL) {

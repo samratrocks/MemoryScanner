@@ -8,6 +8,7 @@ private:
 	HANDLE processHandle;
 	DWORD currentPid;
 	BOOL debug;
+	std::vector<uintptr_t> hits;	// record every place we find the value
 
 	enum HandleSource {
 		NONE,
@@ -24,4 +25,5 @@ public:
 	void enumerateRegions();
 	bool readRegion(LPCVOID baseAddress, SIZE_T size, std::vector<BYTE>& out);
 	HANDLE openProcessByPid(DWORD pid);
+	void scanForValue(DWORD value);
 };
